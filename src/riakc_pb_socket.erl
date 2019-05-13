@@ -513,6 +513,8 @@ list_keys(Pid, Bucket, infinity) ->
     list_keys(Pid, Bucket, [{timeout, undefined}]);
 list_keys(Pid, Bucket, Timeout) when is_integer(Timeout) ->
     list_keys(Pid, Bucket, [{timeout, Timeout}]);
+list_keys(Pid, Bucket, TombstoneFlag) when is_boolean(TombstoneFlag) ->
+    list_keys(Pid, Bucket, [{return_tombstone, TombstoneFlag}]);
 list_keys(Pid, Bucket, Options) ->
     case stream_list_keys(Pid, Bucket, Options) of
         {ok, ReqId} ->
@@ -545,14 +547,21 @@ stream_list_keys(Pid, Bucket, infinity) ->
     stream_list_keys(Pid, Bucket, [{timeout, undefined}]);
 stream_list_keys(Pid, Bucket, Timeout) when is_integer(Timeout) ->
     stream_list_keys(Pid, Bucket, [{timeout, Timeout}]);
+stream_list_keys(Pid, Bucket, TombstoneFlag) when is_boolean(TombstoneFlag) ->
+    stream_list_keys(Pid, Bucket, [{return_tombstone, TombstoneFlag}]);
 stream_list_keys(Pid, Bucket, Options) ->
     ServerTimeout =
         case proplists:get_value(timeout, Options, none) of
             none -> ?DEFAULT_PB_TIMEOUT;
             ST -> ST
         end,
+    TombstoneFlag =
+        case proplists:get_value(return_tombstone, Options, none) of
+            none -> false;
+            TF -> TF
+        end,
     {T, B} = maybe_bucket_type(Bucket),
-    ReqMsg = #rpblistkeysreq{type = T, bucket = B, timeout = ServerTimeout},
+    ReqMsg = #rpblistkeysreq{type = T, bucket = B, timeout = ServerTimeout, return_tombstone = TombstoneFlag},
     ReqId = mk_reqid(),
     call_infinity(Pid, {req, ReqMsg, ServerTimeout, {ReqId, self()}}).
 
